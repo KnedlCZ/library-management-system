@@ -1,0 +1,148 @@
+﻿@model LibraryManagementSystem.ViewModels.LibraryDashboardViewModel
+
+@{
+    ViewData["Title"] = "Prehled";
+}
+
+<h1>Evidence knihovny</h1>
+
+@if (!string.IsNullOrWhiteSpace(Model.Message))
+{
+    <div class="alert alert-success">@Model.Message</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert alert-danger">@Model.ErrorMessage</div>
+}
+
+<section>
+    <h2>Aktivni vypujcky</h2>
+    <table class="table table-striped align-middle">
+        <thead>
+        <tr>
+            <th>Kniha</th>
+            <th>Ctenar</th>
+            <th>Od</th>
+            <th>Dni</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var loan in Model.ActiveLoans)
+        {
+            <tr>
+                <td>@loan.BookTitle</td>
+                <td>@loan.ReaderName</td>
+                <td>@loan.BorrowedAt.ToLocalTime().ToString("d. M. yyyy")</td>
+                <td>@loan.DaysBorrowed</td>
+                <td>
+                    <form asp-action="Return" method="post">
+                        <input type="hidden" name="loanId" value="@loan.Id" />
+                        <button class="btn btn-sm btn-outline-secondary" type="submit">Vratit</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</section>
+
+<section class="mb-4">
+    <h2>Nova vypujcka</h2>
+    <form asp-action="Borrow" method="post" class="row g-2 align-items-end">
+        <div class="col-md-5">
+            <label class="form-label" for="bookId">Kniha</label>
+            <select class="form-select" id="bookId" name="bookId" required>
+                @foreach (var book in Model.Books)
+                {
+                    if (book.AvailableCopies <= 0)
+                    {
+                        <option value="@book.Id" disabled>@book.Title (@book.AvailableCopies dostupne)</option>
+                    }
+                    else
+                    {
+                        <option value="@book.Id">@book.Title (@book.AvailableCopies dostupne)</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label" for="readerId">Ctenar</label>
+            <select class="form-select" id="readerId" name="readerId" required>
+                @foreach (var reader in Model.Readers)
+                {
+                    <option value="@reader.Id">@reader.FullName</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-success w-100" type="submit">Vypujcit</button>
+        </div>
+    </form>
+</section>
+
+
+
+
+<section class="mb-4">
+    <h2>Knihy</h2>
+    <table class="table table-striped align-middle">
+        <thead>
+        <tr>
+            <th>Nazev</th>
+            <th>Autori</th>
+            <th>Kusu</th>
+            <th>Dostupne</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var book in Model.Books)
+        {
+            <tr>
+                <td>@book.Title</td>
+                <td>@book.Authors</td>
+                <td>@book.TotalCopies</td>
+                <td>@book.AvailableCopies</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</section>
+
+<div class="row g-4 mb-4">
+    <section class="col-lg-6">
+        <h2>Pridat knihu</h2>
+        <form asp-action="AddBook" method="post">
+            <div class="mb-2">
+                <label class="form-label" for="title">Nazev</label>
+                <input class="form-control" id="title" name="title" required />
+            </div>
+            <div class="mb-2">
+                <label class="form-label" for="authors">Autori oddeleni carkou</label>
+                <input class="form-control" id="authors" name="authors" required />
+            </div>
+            <div class="mb-2">
+                <label class="form-label" for="totalCopies">Pocet kusu</label>
+                <input class="form-control" id="totalCopies" name="totalCopies" type="number" min="1" value="1" required />
+            </div>
+            <button class="btn btn-primary" type="submit">Ulozit knihu</button>
+        </form>
+    </section>
+
+    <section class="col-lg-6">
+        <h2>Pridat ctenare</h2>
+        <form asp-action="AddReader" method="post">
+            <div class="mb-2">
+                <label class="form-label" for="fullName">Jmeno</label>
+                <input class="form-control" id="fullName" name="fullName" required />
+            </div>
+            <div class="mb-2">
+                <label class="form-label" for="email">E-mail</label>
+                <input class="form-control" id="email" name="email" type="email" />
+            </div>
+            <button class="btn btn-primary" type="submit">Ulozit ctenare</button>
+        </form>
+    </section>
+</div>
+

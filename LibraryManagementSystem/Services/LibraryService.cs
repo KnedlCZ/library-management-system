@@ -1,5 +1,6 @@
 ﻿using LibraryManagementSystem.Data;
 using LibraryManagementSystem.Models;
+using LibraryManagementSystem.ViewModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagementSystem.Services;
@@ -119,6 +120,48 @@ public class LibraryService : ILibraryService
         loan.ReturnedAt = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync();
     }
+    
+    public async Task<IReadOnlyList<LoanViewModel>> GetOverdueLoansAsync(int allowedLoanDays)
+    {
+        var activeLoans = await GetActiveLoanViewModelsAsync();
+        var cutoff = DateTime.UtcNow.Date.AddDays(-allowedLoanDays);
+
+        return activeLoans
+            .Where(loan => loan.BorrowedAt.Date < cutoff)
+            .OrderByDescending(loan => loan.DaysBorrowed)
+            .ToList();
+    }
+    
+    public async Task<LibraryDashboardViewModel> GetDashboardAsync(string? message = null, string? errorMessage = null)
+    {
+        var books = await _dbContext.Books
+            .Include(book => book.Authors)
+            .Include(book => book.Loans)
+            .OrderBy(book => book.Title)
+            .ToListAsync();
+
+        var readers = await _dbContext.Readers
+            .OrderBy(reader => reader.FullName)
+            .ToListAsync();
+
+        var activeLoans = await GetActiveLoanViewModelsAsync();
+
+        return new LibraryDashboardViewModel
+        {
+            Books = books.Select(book => new BookAvailabilityViewModel
+            {
+                Id = book.Id,
+                Title = book.Title,
+                TotalCopies = book.TotalCopies,
+                BorrowedCopies = book.Loans.Count(loan => loan.ReturnedAt == null),
+                Authors = string.Join(", ", book.Authors.OrderBy(author => author.Name).Select(author => author.Name))
+            }).ToList(),
+            Readers = readers,
+            ActiveLoans = activeLoans,
+            Message = message,
+            ErrorMessage = errorMessage
+        };
+    }
 
     public async Task SeedAsync()
     {
@@ -142,5 +185,32 @@ public class LibraryService : ILibraryService
             new Reader { FullName = "Petr Svoboda", Email = "petr@example.com" });
 
         await _dbContext.SaveChangesAsync();
+    }
+    
+    private async Task<List<LoanViewModel>> GetActiveLoanViewModelsAsync()
+    {
+        var now = DateTime.UtcNow;
+
+        var loans = await _dbContext.Loans
+            .AsNoTracking()
+            .Where(loan => loan.ReturnedAt == null)
+            .Select(loan => new
+            {
+                loan.Id,
+                BookTitle = loan.Book.Title,
+                ReaderName = loan.Reader.FullName,
+                loan.BorrowedAt
+            })
+            .OrderByDescending(loan => loan.BorrowedAt)
+            .ToListAsync();
+
+        return loans.Select(loan => new LoanViewModel
+        {
+            Id = loan.Id,
+            BookTitle = loan.BookTitle,
+            ReaderName = loan.ReaderName,
+            BorrowedAt = loan.BorrowedAt,
+            DaysBorrowed = Math.Max(0, (now.Date - loan.BorrowedAt.Date).Days)
+        }).ToList();
     }
 }

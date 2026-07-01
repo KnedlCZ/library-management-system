@@ -1,0 +1,35 @@
+﻿@model LibraryManagementSystem.ViewModels.OverdueReportViewModel
+
+@{
+    ViewData["Title"] = "Dlouhe vypujcky";
+}
+
+<h1>Dlouhe vypujcky</h1>
+<p>Povolena delka vypujcky je @Model.AllowedLoanDays dni.</p>
+
+<table class="table table-striped align-middle">
+    <thead>
+    <tr>
+        <th>Kniha</th>
+        <th>Ctenar</th>
+        <th>Od</th>
+        <th>Dni</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var loan in Model.Loans)
+    {
+        <tr>
+            <td>@loan.BookTitle</td>
+            <td>@loan.ReaderName</td>
+            <td>@loan.BorrowedAt.ToLocalTime().ToString("d. M. yyyy")</td>
+            <td>@loan.DaysBorrowed</td>  
+        </tr>
+    }
+    </tbody>
+</table>
+
+@if (Model.Loans.Count == 0)
+{
+    <p>Zadne vypujcky neprekrocily povolenou delku.</p>
+}
